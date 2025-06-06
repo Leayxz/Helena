@@ -25,8 +25,8 @@ while True:
         
         trades_abertas = json.loads(lnm.futures_get_trades({"type": "running"}))
         for ordens in trades_abertas:
-            if "id" in ordens and "price" in ordens and "sum_carry_fees" in ordens:
-                ordens_abertas.append({"id": ordens["id"], "price": ordens["price"], "sum_carry_fees": ordens["sum_carry_fees"]})
+            if "id" in ordens and "margin" in ordens and "price" in ordens and "sum_carry_fees" in ordens and "liquidation" in ordens:
+                ordens_abertas.append({"id": ordens["id"], "margin": ordens["margin"], "price": ordens["price"], "sum_carry_fees": ordens["sum_carry_fees"], "liquidation": ordens["liquidation"]})
 
         ################################ PREÇO ATUAL DO BITCOIN ################################
     
@@ -39,7 +39,7 @@ while True:
         if margem_disponivel > 100 and ultimo_preco < 100:
             if abs(preco_atual - ultimo_preco) >= ultimo_preco * 0.005:
                 print("Variação Detectada. Enviando Ordem 🫡")
-                new_trade = lnm.futures_new_trade({"type": "m", "side": "b", "quantity": 11, "leverage": 5})
+                new_trade = lnm.futures_new_trade({"type": "m", "side": "b", "quantity": 35, "leverage": 10})
                 print("Ordem Enviada: Compra Efetivada ✅")
                 ultimo_preco = preco_atual
 
@@ -52,6 +52,13 @@ while True:
             if preco_atual >= ordem["price"] * (1 + taxa_fixa + taxa_funding):
                 lnm.futures_close({"id": ordem["id"]})
                 print("Ordem Fechada: Lucro No Bolso 🤑")
+
+        ################################ INJETANDO MARGEM NAS OPERAÇÕES ################################
+
+        for ordem in ordens_abertas:
+            if preco_atual < ordem["liquidation"] * 1.05:
+                lnm.futures_add_margin({'amount': ordem["margin"] / 2, 'id': ordem["id"]})
+                print("PERIGO: Injetando Margem ⚠️")
 
     except Exception as e:
         print("Erro durante loop:", e)
