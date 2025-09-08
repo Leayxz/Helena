@@ -1,26 +1,22 @@
+import time, json
 from lnmarkets import rest
 from decouple import config
 from _Telegram_Mensagem import enviarMensagem
-import time
-import json
 
-options = {"key": config("LNM_KEY"),
-           "secret": config("LNM_SECRET"),
-           "passphrase": config("LNM_PASSPHRASE"),
-           "network": config("LNM_NETWORK")}
-
+options = {"key": config("LNM_KEY"), "secret": config("LNM_SECRET"), "passphrase": config("LNM_PASSPHRASE"), "network": config("LNM_NETWORK")}
 lnm = rest.LNMarketsRest(**options)
 
 print("Olá Mestre! Iniciando...")
 print("Testando Telegram...")
 enviarMensagem("Testando Telegram...")
 
-ultimo_preco = 107000
+ultimo_preco = 0
 
 while True:
-    ############################## ARMAZENAR ORDENS ABERTAS E MONTANTE DISPONIVEL ##############################
+
+    ####################### ARMAZENAR ORDENS ABERTAS E MONTANTE DISPONIVEL #########################
     try:
-        user = json.loads(lnm.get_user())
+        user_data = json.loads(lnm.get_user())
         trades_abertos = json.loads(lnm.futures_get_trades({"type": "running"}))
 
         ################################ PREÇO ATUAL DO BITCOIN ################################
@@ -31,10 +27,12 @@ while True:
         print(f"Preço atual: {preco_atual} | Tempo: {time.time() - start:.2f}")
 
         ################################ ENVIANDO ORDEM DE COMPRA ################################
+        preco_limite, variacao = 250_000, 0.007
+        quantity, leverage = 123, 10
 
-        if user["balance"] > 200000 and abs(preco_atual - ultimo_preco) >= 600:
+        if user_data["balance"] > preco_limite and abs(preco_atual - ultimo_preco) >= ultimo_preco * variacao:
             print("Variação Detectada. Enviando Ordem 🫡")
-            new_trade = json.loads(lnm.futures_new_trade({"type": "m", "side": "b", "quantity": 30, "leverage": 10}))
+            new_trade = json.loads(lnm.futures_new_trade({"type": "m", "side": "b", "quantity": quantity, "leverage": leverage}))
             print(f"Ordem Enviada: Compra Efetivada ✅\nPreço De Compra: {new_trade['price']} 🎯")
             enviarMensagem(f"Ordem Enviada: Compra Efetivada ✅\nPreço De Compra: {new_trade['price']} 🎯")
             ultimo_preco = new_trade["price"]
@@ -42,24 +40,27 @@ while True:
         ################################ FECHANDO ORDENS ABERTAS ################################
 
         for ordem in trades_abertos:
-            lucro_taxa = 0.005 + 0.002
-            taxa_funding = ((ordem["sum_carry_fees"] / 100000000) * preco_atual) / ordem["price"]
+            lucro, taxa = 0.005, 0.002
+            taxa_funding = ((ordem["sum_carry_fees"] / 100000000) * preco_atual) / ordem["quantity"]
 
-            if preco_atual > ordem["price"] * (1 + lucro_taxa + taxa_funding):
+            if preco_atual > ordem["price"] * (1 + lucro + taxa + taxa_funding):
                 new_close = json.loads(lnm.futures_close({"id": ordem["id"]}))
                 lucro_liquido = new_close['pl'] - (new_close['opening_fee'] + new_close['closing_fee'] + new_close['sum_carry_fees'])
                 print(f"Ordem Fechada: Lucro no Bolso 🤑\nLucro Obtido: {lucro_liquido} 💰")
                 enviarMensagem(f"Ordem Fechada: Lucro no Bolso 🤑\nLucro Obtido: {lucro_liquido} 💰")
 
         ################################ INJETANDO MARGEM NAS OPERAÇÕES ################################
+        protecao = 1.02
 
         for ordem in trades_abertos:
-            if preco_atual < ordem["liquidation"] * 1.02:
+            if preco_atual < ordem["liquidation"] * protecao:
                 lnm.futures_add_margin({'amount': int(ordem["margin"] / 3), 'id': ordem["id"]})
                 print("PERIGO: Injetando Margem ⚠️")
                 enviarMensagem("PERIGO: Injetando Margem ⚠️")
 
     except Exception as erro:
-        print("Erro durante loop:", erro)
+        print("ALGO DEU ERRADO:", erro)
+        enviarMensagem("ALGO DEU ERRADO:", erro)
+        break
 
-    time.sleep(0.8)
+    time.sleep(1.5)
