@@ -10,7 +10,7 @@ print("Olá Mestre! Iniciando...")
 print("Testando Telegram...")
 enviarMensagem("Testando Telegram...")
 
-ultimo_preco = 0
+ultimo_preco = 116_000
 
 while True:
 
