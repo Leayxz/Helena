@@ -60,7 +60,6 @@ while True:
 
     except Exception as erro:
         print("ALGO DEU ERRADO:", erro)
-        enviarMensagem("ALGO DEU ERRADO:", erro)
-        break
+        enviarMensagem(f"ALGO DEU ERRADO: {erro}")
 
     time.sleep(1.5)
