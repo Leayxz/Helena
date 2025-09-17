@@ -10,47 +10,34 @@ print("Olá Mestre! Iniciando...")
 print("Testando Telegram...")
 enviarMensagem("Testando Telegram...")
 
-ultimo_preco = 115_927
+ultimo_preco = 115_900
 
 while True:
-
-    ####################### ARMAZENAR ORDENS ABERTAS E MONTANTE DISPONIVEL #########################
     try:
-        user_data_lnm = lnm.get_user()
-        user_data = json.loads(user_data_lnm)
+        ####################### ARMAZENAR ORDENS ABERTAS E MONTANTE DISPONIVEL #########################
 
-        trades_abertos_lnm = lnm.futures_get_trades({"type": "running"})
-        trades_abertos = json.loads(trades_abertos_lnm)
+        user_data = json.loads(lnm.get_user())
+        trades_abertos = json.loads(lnm.futures_get_trades({"type": "running"}))
 
         ################################ PREÇO ATUAL DO BITCOIN ################################
 
         start = time.time()
-        ticker_lnm = lnm.futures_get_ticker()
-        ticker = json.loads(ticker_lnm)
+        ticker = json.loads(lnm.futures_get_ticker())
         preco_atual = ticker["lastPrice"]
         print(f"Preço atual: {preco_atual} | Tempo: {time.time() - start:.2f}")
 
-    except Exception as erro:
-        print(f"RESPOSTA USER LNM: {user_data_lnm}\n RESPOSTA TRADES LNM: {ticker_lnm}\n RESPOSTA TICKER LNM: {ticker_lnm}")
-        enviarMensagem(f"RESPOSTA USER LNM: {user_data_lnm}\n RESPOSTA TRADES LNM: {ticker_lnm}\n RESPOSTA TICKER LNM: {ticker_lnm}")
-
         ################################ ENVIANDO ORDEM DE COMPRA ################################
+
         preco_limite, variacao = 250_000, 0.007
         quantity, leverage = 123, 10
 
         if user_data["balance"] > preco_limite and abs(preco_atual - ultimo_preco) >= ultimo_preco * variacao:
-            print("Variação Detectada. Enviando Ordem 🫡")
-            
-            try:
-                new_trade_lnm = lnm.futures_new_trade({"type": "m", "side": "b", "quantity": quantity, "leverage": leverage})
-                new_trade = json.loads(new_trade_lnm)
-                print(f"Ordem Enviada: Compra Efetivada ✅\nPreço De Compra: {new_trade['price']} 🎯")
-                enviarMensagem(f"Ordem Enviada: Compra Efetivada ✅\nPreço De Compra: {new_trade['price']} 🎯")
-                ultimo_preco = new_trade["price"]
 
-            except Exception as erro:
-                print(f"RESPOSTA LNM: {new_trade_lnm}. RESPOSTA NEW_TRADE_JSON: {erro}")
-                enviarMensagem(f"RESPOSTA LNM: {new_trade_lnm}. RESPOSTA NEW_TRADE_JSON: {erro}")
+            print("Variação Detectada. Enviando Ordem 🫡")
+            new_trade = json.loads(lnm.futures_new_trade({"type": "m", "side": "b", "quantity": quantity, "leverage": leverage}))
+            print(f"Ordem Enviada: Compra Efetivada ✅\nPreço De Compra: {new_trade['price']} 🎯")
+            enviarMensagem(f"Ordem Enviada: Compra Efetivada ✅\nPreço De Compra: {new_trade['price']} 🎯")
+            ultimo_preco = new_trade["price"]
 
         ################################ FECHANDO ORDENS ABERTAS ################################
 
@@ -65,6 +52,7 @@ while True:
                 enviarMensagem(f"Ordem Fechada: Lucro no Bolso 🤑\nLucro Obtido: {lucro_liquido} 💰")
 
         ################################ INJETANDO MARGEM NAS OPERAÇÕES ################################
+
         protecao = 1.02
 
         for ordem in trades_abertos:
@@ -73,4 +61,7 @@ while True:
                 print("PERIGO: Injetando Margem ⚠️")
                 enviarMensagem("PERIGO: Injetando Margem ⚠️")
 
-    time.sleep(1.5)
+        time.sleep(1.5)
+
+    except Exception as erro:
+        print(f"❌ ERRO: {erro}")
