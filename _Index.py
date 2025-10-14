@@ -11,7 +11,7 @@ print("Testando Telegram...")
 enviarMensagem("Testando Telegram...")
 
 ultima_ath = 126_200
-ultimo_preco = 112_197
+ultimo_preco = 110_619
 
 while True:
       try:
@@ -47,7 +47,7 @@ while True:
                   print("Variação Detectada. Enviando Ordem 🫡")
                   new_trade = json.loads(lnm.futures_new_trade({"type": "m", "side": "b", "margin": margin, "leverage": leverage}))
                   print(f"Ordem Enviada: Compra Efetivada ✅\nPreço De Compra: {new_trade['price']} 🎯")
-                  enviarMensagem(f"Distância ATH: {percentual_queda} 🔻\nOrdem Enviada: Compra Efetivada ✅\nPreço De Compra: {new_trade['price']} 🎯")
+                  enviarMensagem(f"🔻 Distância ATH: {percentual_queda:.2f} \nOrdem Enviada: Compra Efetivada ✅\nPreço De Compra: {new_trade['price']} 🎯")
                   ultimo_preco = new_trade["price"]
 
             # FECHANDO ORDENS ABERTAS
