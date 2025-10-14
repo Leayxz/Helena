@@ -1,4 +1,4 @@
-import time, json
+import time, json, requests
 from lnmarkets import rest
 from decouple import config
 from _telegram import enviarMensagem
@@ -10,54 +10,70 @@ print("Olá Mestre! Iniciando...")
 print("Testando Telegram...")
 enviarMensagem("Testando Telegram...")
 
-ultimo_preco = 120_000
+ultima_ath = 126_200
+ultimo_preco = 112_197
 
 while True:
-    try:
-        # ARMAZENAR ORDENS ABERTAS E MONTANTE DISPONIVEL
-        user_data = json.loads(lnm.get_user())
-        trades_abertos = json.loads(lnm.futures_get_trades({"type": "running"}))
+      try:
+            # ARMAZENAR ORDENS ABERTAS E MONTANTE DISPONIVEL
+            user_data = json.loads(lnm.get_user())
+            trades_abertos = json.loads(lnm.futures_get_trades({"type": "running"}))
 
-        # PREÇO ATUAL DO BITCOIN
-        start = time.time()
-        ticker = json.loads(lnm.futures_get_ticker())
-        preco_atual = ticker["lastPrice"]
-        print(f"Preço atual: {preco_atual} | Tempo: {time.time() - start:.2f}")
+            # PREÇO ATUAL LNM OU PRECO ATUAL BYBIT
+            try:
+                  start = time.time()
+                  ticker = json.loads(lnm.futures_get_ticker())
+                  preco_atual = ticker["lastPrice"]
+                  print(f"🟦 Preço Atual Ln Markets: {preco_atual} | Tempo: {time.time() - start:.2f}")
 
-        # ENVIANDO ORDEM DE COMPRA
-        preco_limite, variacao = 250_000, 0.007
-        quantity, leverage = 280, 10
+            except:
+                  url = "https://api.bybit.com/v5/market/tickers"
+                  params = {"category": "spot", "symbol": "BTCUSDT"}
+                  ticker = requests.get(url, params = params).json()['result']['list'][0]
+                  preco_atual = ticker['lastPrice']
+                  print(f"🟧 Preço Atual Bybit: {preco_atual} | Tempo: {time.time() - start:.2f}")
 
-        if user_data["balance"] > preco_limite and abs(preco_atual - ultimo_preco) >= ultimo_preco * variacao:
+            # ATUALIZA ATH
+            if ultima_ath < preco_atual:
+                  ultima_ath = preco_atual
 
-            print("Variação Detectada. Enviando Ordem 🫡")
-            new_trade = json.loads(lnm.futures_new_trade({"type": "m", "side": "b", "quantity": quantity, "leverage": leverage}))
-            print(f"Ordem Enviada: Compra Efetivada ✅\nPreço De Compra: {new_trade['price']} 🎯")
-            enviarMensagem(f"Ordem Enviada: Compra Efetivada ✅\nPreço De Compra: {new_trade['price']} 🎯")
-            ultimo_preco = new_trade["price"]
+            # ENVIANDO ORDEM DE COMPRA
+            percentual_queda = ((ultima_ath - ultimo_preco) / ultima_ath) * 100
+            preco_limite, variacao = 250_000, 0.007
+            margin, leverage = 24400, 10
 
-        # FECHANDO ORDENS ABERTAS
-        for ordem in trades_abertos:
-            lucro, taxa = 0.005, 0.002
-            taxa_funding = ((ordem["sum_carry_fees"] / 100000000) * preco_atual) / ordem["quantity"]
+            if user_data["balance"] > preco_limite and abs(preco_atual - ultimo_preco) >= ultimo_preco * variacao:
 
-            if preco_atual > ordem["price"] * (1 + lucro + taxa + taxa_funding):
-                new_close = json.loads(lnm.futures_close({"id": ordem["id"]}))
-                lucro_liquido = new_close['pl'] - (new_close['opening_fee'] + new_close['closing_fee'] + new_close['sum_carry_fees'])
-                print(f"Ordem Fechada: Lucro no Bolso 🤑\nLucro Obtido: {lucro_liquido} 💰")
-                enviarMensagem(f"Ordem Fechada: Lucro no Bolso 🤑\nLucro Obtido: {lucro_liquido} 💰")
+                  print("Variação Detectada. Enviando Ordem 🫡")
+                  new_trade = json.loads(lnm.futures_new_trade({"type": "m", "side": "b", "margin": margin, "leverage": leverage}))
+                  print(f"Ordem Enviada: Compra Efetivada ✅\nPreço De Compra: {new_trade['price']} 🎯")
+                  enviarMensagem(f"Distância ATH: {percentual_queda} 🔻\nOrdem Enviada: Compra Efetivada ✅\nPreço De Compra: {new_trade['price']} 🎯")
+                  ultimo_preco = new_trade["price"]
 
-        # INJETANDO MARGEM NAS OPERAÇÕES
-        protecao = 1.02
+            # FECHANDO ORDENS ABERTAS
+            for ordem in trades_abertos:
+                  lucro, taxa = 0.005, 0.002
+                  taxa_funding = ((ordem["sum_carry_fees"] / 100000000) * preco_atual) / ordem["quantity"]
 
-        for ordem in trades_abertos:
-            if preco_atual < ordem["liquidation"] * protecao:
-                lnm.futures_add_margin({'amount': int(ordem["margin"] / 3), 'id': ordem["id"]})
-                print("PERIGO: Injetando Margem ⚠️")
-                enviarMensagem("PERIGO: Injetando Margem ⚠️")
+                  if preco_atual > ordem["price"] * (1 + lucro + taxa + taxa_funding):
+                        new_close = json.loads(lnm.futures_close({"id": ordem["id"]}))
+                        lucro_liquido = new_close['pl'] - (new_close['opening_fee'] + new_close['closing_fee'] + new_close['sum_carry_fees'])
+                        print(f"Ordem Fechada: Lucro no Bolso 🤑\nLucro Obtido: {lucro_liquido} 💰")
+                        enviarMensagem(f"Ordem Fechada: Lucro no Bolso 🤑\nLucro Obtido: {lucro_liquido} 💰")
 
-        time.sleep(1.5)
+            # INJETANDO MARGEM NAS OPERAÇÕES
+            protecao = 1.02
 
-    except Exception as erro:
-        print(f"❌ ERRO: {erro}")
-        enviarMensagem(f"❌ ERRO: {erro}")
+            for ordem in trades_abertos:
+                  if preco_atual < ordem["liquidation"] * protecao:
+                        lnm.futures_add_margin({'amount': int(ordem["margin"] / 3), 'id': ordem["id"]})
+                        print("PERIGO: Injetando Margem ⚠️")
+                        enviarMensagem("PERIGO: Injetando Margem ⚠️")
+
+            time.sleep(1.5)
+
+      except Exception as erro:
+            print(f"❌ ERRO: {erro}")
+            enviarMensagem(f"❌ ERRO: {erro}")
+
+# MUDANDO ABERTURA DE DOLAR PRA SATS PRA EVITAR AUMENTO CONFORME O PREÇO DESCE
