@@ -18,6 +18,9 @@ while True:
             # BUSCA UMA VEZ ORDENS ABERTAS E MONTANTE ARMAZENAR ORDENS ABERTAS E MONTANTE DISPONIVEL
             user_data = json.loads(lnm.get_user())
             trades_abertos = json.loads(lnm.futures_get_trades({"type": "running"}))
+            if 'message' in user_data or 'message' in trades_abertos:
+                  print(f'Resposta User_Data: {user_data}\nResposta Trades_Abertos: {trades_abertos}')
+                  continue
 
             # PREÇO ATUAL LNM OU PRECO ATUAL BYBIT
             try:
