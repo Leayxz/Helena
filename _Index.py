@@ -18,7 +18,6 @@ while True:
             # BUSCA UMA VEZ ORDENS ABERTAS E MONTANTE ARMAZENAR ORDENS ABERTAS E MONTANTE DISPONIVEL
             user_data = json.loads(lnm.get_user())
             trades_abertos = json.loads(lnm.futures_get_trades({"type": "running"}))
-            print(f'Resposta User_data: {user_data}\n Resposta Trades_abertos: {trades_abertos}')
 
             # PREÇO ATUAL LNM OU PRECO ATUAL BYBIT
             try:
@@ -72,8 +71,11 @@ while True:
 
             time.sleep(1.5)
 
+      except ValueError as erro:
+            print(f'❌ Erro: {erro}')
+            enviarMensagem(f"❌ ERRO: {erro}")
+
       except Exception as erro:
             print(f"❌ ERRO: {erro}")
-            enviarMensagem(f"❌ ERRO: {erro}")
 
 # MUDANDO ABERTURA DE DOLAR PRA SATS PRA EVITAR AUMENTO CONFORME O PREÇO DESCE
