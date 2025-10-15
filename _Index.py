@@ -25,6 +25,10 @@ while True:
                   preco_atual = requests.get("https://api.lnmarkets.com/v2/futures/ticker", params = {"symbol": "BTCUSD"}).json()['lastPrice']
                   print(f"🟦 Preço Atual Ln Markets: {preco_atual} | Tempo: {time.time() - start:.2f}")
                   print(f"Saldo Atual: {user_data['balance']}")
+            
+            except ValueError as erro:
+                  print(erro)
+
             except:
                   url = "https://api.bybit.com/v5/market/tickers"
                   params = {"category": "spot", "symbol": "BTCUSDT"} # Spot??
