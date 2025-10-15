@@ -15,11 +15,15 @@ ultimo_preco = 110_619
 
 while True:
       try:
-            # BUSCA UMA VEZ ORDENS ABERTAS E MONTANTE ARMAZENAR ORDENS ABERTAS E MONTANTE DISPONIVEL
+            # SALDO E ORDENS ABERTAS
             user_data = json.loads(lnm.get_user())
             trades_abertos = json.loads(lnm.futures_get_trades({"type": "running"}))
+
+            # VERIFICA RATE LIMIT
             if 'message' in user_data or 'message' in trades_abertos:
                   print(f'Resposta User_Data: {user_data}\nResposta Trades_Abertos: {trades_abertos}')
+                  enviarMensagem(f"Rate Limit Atingido 🚫\n")
+                  time.sleep(3)
                   continue
 
             # PREÇO ATUAL LNM OU PRECO ATUAL BYBIT
@@ -27,17 +31,14 @@ while True:
                   start = time.time()
                   preco_atual = requests.get("https://api.lnmarkets.com/v2/futures/ticker", params = {"symbol": "BTCUSD"}).json()['lastPrice']
                   print(f"🟦 Preço Atual Ln Markets: {preco_atual} | Tempo: {time.time() - start:.2f}")
-                  print(f"Saldo Atual: {user_data['balance']}")
-            
-            except ValueError as erro:
-                  print(erro)
+                  print(f"💵 Saldo Atual 7lpg5d9v1vk: {user_data['balance']}")
 
             except:
-                  url = "https://api.bybit.com/v5/market/tickers"
-                  params = {"category": "spot", "symbol": "BTCUSDT"} # Spot??
-                  ticker = requests.get(url, params = params).json()['result']['list'][0]
+                  start = time.time()
+                  ticker = requests.get("https://api.bybit.com/v5/market/tickers", params = {"category": "spot", "symbol": "BTCUSDT"}).json()['result']['list'][0]
                   preco_atual = float(ticker['lastPrice'])
                   print(f"🟧 Preço Atual Bybit: {preco_atual} | Tempo: {time.time() - start:.2f}")
+                  print(f"💵 Saldo Atual 7lpg5d9v1vk: {user_data['balance']}")
 
             # ATUALIZA ATH
             if ultima_ath < preco_atual:
